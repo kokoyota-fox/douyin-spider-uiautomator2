@@ -1,14 +1,11 @@
 import uiautomator2 as u2
-import time
-import asyncio
-
 
 class Douyin:
 
     def __init__(self, config):
         self.connect = u2.connect_adb_wifi(config['ip'])
         self.size = self.__get_windows_size()
-        self.count = config['count'].values[0]
+        self.count = config['count']
         self.config = config
         self.__handler_watch()
         self.already = []
@@ -44,57 +41,55 @@ class Douyin:
             self.connect.press('back')
             size = size - 1
 
-    def random_direct_broadcasting_room_scribe(self, start=True):
+    async def random_direct_broadcasting_room_scribe(self):
         """ 直播间的关注"""
         # 等待某个activity10秒，如果找到了就直接启动
         # if self.connect.wait_activity('', timeout=10) :
-        if start:
-            self.__start_app()
-            while True:
-                self.__handler_up()
-                time.sleep(1)
-                if self.connect(text='直播').exists:
-                    break
-            '''点击直播间'''
-            self.connect(text='直播').click_exists(5)
+        self.__start_app()
+        while True:
+            self.__handler_up()
+            self.connect.sleep(1)
+            if self.connect(text='直播').exists:
+                break
+        '''点击直播间'''
+        self.connect(text='直播').click_exists(5)
+        self.connect.sleep(5)
         size = self.count
         while size > 0:
             self.__direct_broadcasting_stream_user_scribe()
-            '''返回'''
-            self.connect.press('back')
             size = size - 1
 
     def __direct_broadcasting_stream_user_scribe(self):
-        """点击进来的用户"""
-        self.connect.xpath('//*[@resource-id="com.zhiliaoapp.musically:id/bse"]/android.view.ViewGroup['
-                           '4]/android.widget.ImageView[1]') \
-            .click_exists(5)
-        time.sleep(1)
-        '''这个直播间没啥人，换一个直播间'''
-        if self.connect(resourceId='com.zhiliaoapp.musically:id/aq5', text='關注中').exists or \
-                self.connect(resourceId='com.zhiliaoapp.musically:id/dax', text='直播已結束').exists:
-            self.connect.press('back')
+        """这个直播间没啥人，换一个直播间"""
+        if self.connect(resourceId='com.zhiliaoapp.musically:id/dax', text='直播已結束').exists:
             self.__handler_up()
-            self.random_direct_broadcasting_room_scribe(start=False)
+            self.connect.sleep(2)
+            self.__direct_broadcasting_stream_user_scribe()
             return
-        '''点击关注'''
-        if self.connect(resourceId='com.zhiliaoapp.musically:id/apk').click_exists(5):
-            time.sleep(1)
-            self.connect.press('back')
+        """点击进来的用户"""
+        if self.connect(resourceId='com.zhiliaoapp.musically:id/bse') \
+                .child(resourceId='com.zhiliaoapp.musically:id/beg', index=3) \
+                .child(resourceId='com.zhiliaoapp.musically:id/bs6').click_exists(2):
+            if self.connect(resourceId='com.zhiliaoapp.musically:id/aq5', text='關注中').exists:
+                self.connect.press('back')
+                self.__handler_up()
+                self.connect.sleep(2)
+                self.__direct_broadcasting_stream_user_scribe()
+                return
+            """点击关注"""
+            if self.connect(resourceId='com.zhiliaoapp.musically:id/apk').click_exists(2):
+                self.connect.sleep(1)
+                self.connect.press('back')
 
-    async def fans_list_scribe_and_personal_letter(self, start=True):
+    async def fans_list_scribe_and_personal_letter(self):
         """粉丝列表关注和私信"""
-        if start:
-            self.__start_app()
+        self.__start_app()
         self.connect(resourceId='com.zhiliaoapp.musically:id/br3').click_exists(5)
         self.connect(resourceId='com.zhiliaoapp.musically:id/aq_') \
             .child(resourceId='com.zhiliaoapp.musically:id/aq8', text='粉丝').click_exists(5)
-        task = [
-            self.personal_letter()
-        ]
-        await asyncio.gather(*task)
+        self.personal_letter()
 
-    async def personal_letter(self):
+    def personal_letter(self):
         """私信"""
         users = self.connect(resourceId='com.zhiliaoapp.musically:id/cj6').child(
             resourceId='com.zhiliaoapp.musically:id/dqg')
@@ -116,17 +111,14 @@ class Douyin:
             response = self.config['mobile']
             self.connect(resourceId='com.zhiliaoapp.musically:id/bue').set_text(str(response))
             self.connect(resourceId='com.zhiliaoapp.musically:id/cnw').click_exists(2)
-            time.sleep(1)
+            self.connect.sleep(1)
             self.connect.press('back')
-            time.sleep(1)
+            self.connect.sleep(1)
             self.connect.press('back')
-            time.sleep(1)
+            self.connect.sleep(1)
         all_users = [i.info['text'] for i in users]
         if set(all_users).issubset(set(self.already)):
             return
         self.__handler_up()
         self.__handler_up()
-        task = [
-            self.personal_letter()
-        ]
-        await asyncio.gather(*task)
+        self.personal_letter()
